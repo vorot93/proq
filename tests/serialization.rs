@@ -4,7 +4,7 @@ use std::result::Result as StdResult;
 use chrono::{DateTime, FixedOffset};
 use url::Url;
 
-use proq::result_types::{
+use tokio_proq::result_types::{
     ActiveTarget, Alert, AlertManager, AlertManagers, AlertState, ApiErr, ApiOk, ApiResult, Config,
     Data, DroppedTarget, Expression, Instant, LabelsOrValues, Metric, Range, Rule, RuleGroups,
     RuleType, Rules, Sample, Series, Snapshot, StringSample, TargetHealth, Targets,

@@ -1,10 +1,10 @@
 use chrono::Utc;
 use once_cell::sync::OnceCell;
-use proq::api::{ProqClient, ProqProtocol};
-use proq::query_types::{ProqRulesType, ProqTargetStates};
-use proq::result_types::ApiResult::ApiOk;
 use std::sync::Once;
 use std::time::Duration;
+use tokio_proq::api::{ProqClient, ProqProtocol};
+use tokio_proq::query_types::{ProqRulesType, ProqTargetStates};
+use tokio_proq::result_types::ApiResult::ApiOk;
 
 static CLIENT: OnceCell<ProqClient> = OnceCell::new();
 static BARRIER: Once = Once::new();
@@ -25,7 +25,7 @@ fn client() -> &'static ProqClient {
 
 #[test]
 fn proq_instant_query() {
-    futures::executor::block_on(async {
+    tokio::runtime::Runtime::new().unwrap().block_on(async {
         let x = match client().instant_query("up", None).await.unwrap() {
             ApiOk(r) => {
                 dbg!(r);
@@ -43,7 +43,7 @@ fn proq_instant_query() {
 
 #[test]
 fn proq_range_query() {
-    futures::executor::block_on(async {
+    tokio::runtime::Runtime::new().unwrap().block_on(async {
         let end = Utc::now();
         let start = Some(end - chrono::Duration::minutes(1));
         let step = Some(Duration::from_secs_f64(1.5));
@@ -69,7 +69,7 @@ fn proq_range_query() {
 
 #[test]
 fn proq_series() {
-    futures::executor::block_on(async {
+    tokio::runtime::Runtime::new().unwrap().block_on(async {
         let end = Utc::now();
         let start = Some(end - chrono::Duration::hours(1));
 
@@ -92,7 +92,7 @@ fn proq_series() {
 
 #[test]
 fn proq_labels() {
-    futures::executor::block_on(async {
+    tokio::runtime::Runtime::new().unwrap().block_on(async {
         let x = match client().label_names().await.unwrap() {
             ApiOk(r) => {
                 dbg!(r);
@@ -110,7 +110,7 @@ fn proq_labels() {
 
 #[test]
 fn proq_label_values() {
-    futures::executor::block_on(async {
+    tokio::runtime::Runtime::new().unwrap().block_on(async {
         let query_label = "version";
 
         let x = match client().label_values(query_label).await.unwrap() {
@@ -130,7 +130,7 @@ fn proq_label_values() {
 
 #[test]
 fn proq_targets() {
-    futures::executor::block_on(async {
+    tokio::runtime::Runtime::new().unwrap().block_on(async {
         let x = match client().targets().await.unwrap() {
             ApiOk(r) => {
                 dbg!(r);
@@ -148,7 +148,7 @@ fn proq_targets() {
 
 #[test]
 fn proq_targets_with_state() {
-    futures::executor::block_on(async {
+    tokio::runtime::Runtime::new().unwrap().block_on(async {
         let state_filer = ProqTargetStates::ACTIVE;
 
         let x = match client().targets_with_state(state_filer).await.unwrap() {
@@ -168,7 +168,7 @@ fn proq_targets_with_state() {
 
 #[test]
 fn proq_rules() {
-    futures::executor::block_on(async {
+    tokio::runtime::Runtime::new().unwrap().block_on(async {
         let x = match client().rules().await.unwrap() {
             ApiOk(r) => {
                 dbg!(r);
@@ -186,7 +186,7 @@ fn proq_rules() {
 
 #[test]
 fn proq_rules_with_type() {
-    futures::executor::block_on(async {
+    tokio::runtime::Runtime::new().unwrap().block_on(async {
         let rule_type = ProqRulesType::ALERT;
 
         let x = match client().rules_with_type(rule_type).await.unwrap() {
@@ -206,7 +206,7 @@ fn proq_rules_with_type() {
 
 #[test]
 fn proq_alerts() {
-    futures::executor::block_on(async {
+    tokio::runtime::Runtime::new().unwrap().block_on(async {
         let x = match client().alerts().await.unwrap() {
             ApiOk(r) => {
                 dbg!(r);
@@ -224,7 +224,7 @@ fn proq_alerts() {
 
 #[test]
 fn proq_alert_manager() {
-    futures::executor::block_on(async {
+    tokio::runtime::Runtime::new().unwrap().block_on(async {
         let x = match client().alert_managers().await.unwrap() {
             ApiOk(r) => {
                 dbg!(r);
@@ -242,7 +242,7 @@ fn proq_alert_manager() {
 
 #[test]
 fn proq_config() {
-    futures::executor::block_on(async {
+    tokio::runtime::Runtime::new().unwrap().block_on(async {
         let x = match client().config().await.unwrap() {
             ApiOk(r) => {
                 dbg!(r);
@@ -260,7 +260,7 @@ fn proq_config() {
 
 #[test]
 fn proq_flags() {
-    futures::executor::block_on(async {
+    tokio::runtime::Runtime::new().unwrap().block_on(async {
         let x = match client().flags().await.unwrap() {
             ApiOk(r) => {
                 dbg!(r);

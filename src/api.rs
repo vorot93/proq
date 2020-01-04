@@ -3,6 +3,7 @@
 //!
 //! This module provides Prometheus Query API related methods.
 
+use std::collections::HashMap;
 use std::str::FromStr;
 use std::time::Duration;
 
@@ -11,7 +12,6 @@ use chrono::offset::Utc;
 use chrono::DateTime;
 use http::{uri, Uri};
 use serde::Serialize;
-use surf::*;
 
 use crate::query_types::*;
 use crate::result_types::ApiResult;
@@ -50,6 +50,7 @@ pub struct ProqClient {
     host: Url,
     protocol: ProqProtocol,
     query_timeout: Option<Duration>,
+    http_client: reqwest::Client,
 }
 
 impl ProqClient {
@@ -64,7 +65,7 @@ impl ProqClient {
     /// # Example
     ///
     /// ```rust
-    /// use proq::prelude::*;
+    /// use tokio_proq::prelude::*;
     ///# use chrono::Utc;
     ///# use std::time::Duration;
     ///
@@ -91,7 +92,7 @@ impl ProqClient {
     /// # Example
     ///
     /// ```rust
-    /// use proq::prelude::*;
+    /// use tokio_proq::prelude::*;
     ///# use chrono::Utc;
     ///# use std::time::Duration;
     ///
@@ -114,34 +115,49 @@ impl ProqClient {
             host,
             query_timeout,
             protocol,
+            http_client: reqwest::Client::new(),
         })
     }
 
     async fn get_basic(&self, url: Url) -> ProqResult<ApiResult> {
-        surf::get(url)
-            .recv_json()
+        Ok(self
+            .http_client
+            .get(&url.to_string())
+            .send()
             .await
-            .map_err(|e| ProqError::GenericError(e.to_string()))
+            .map_err(ProqError::HTTPClientError)?
+            .json()
+            .await
+            .map_err(ProqError::HTTPClientError)?)
     }
 
     async fn get_query(&self, endpoint: &str, query: &impl Serialize) -> ProqResult<ApiResult> {
         let url: Url = Url::from_str(self.get_slug(&endpoint)?.to_string().as_str())?;
-        surf::get(url)
-            .set_query(&query)
-            .map_err(|e| ProqError::HTTPClientError(Box::new(e)))?
-            .recv_json()
+        Ok(self
+            .http_client
+            .get(&url.to_string())
+            .query(&query)
+            .send()
             .await
-            .map_err(|e| ProqError::GenericError(e.to_string()))
+            .map_err(ProqError::HTTPClientError)?
+            .json()
+            .await
+            .map_err(ProqError::HTTPClientError)?)
     }
 
     async fn post(&self, endpoint: &str, payload: String) -> ProqResult<ApiResult> {
         let url: Url = Url::from_str(self.get_slug(&endpoint)?.to_string().as_str())?;
-        surf::post(url)
-            .body_string(payload)
-            .set_mime(mime::APPLICATION_WWW_FORM_URLENCODED)
-            .recv_json()
+        Ok(self
+            .http_client
+            .post(&url.to_string())
+            .form(&HashMap::<String, String>::default())
+            .body(payload)
+            .send()
             .await
-            .map_err(|e| ProqError::GenericError(e.to_string()))
+            .map_err(ProqError::HTTPClientError)?
+            .json()
+            .await
+            .map_err(ProqError::HTTPClientError)?)
     }
 
     ///
@@ -156,7 +172,7 @@ impl ProqClient {
     /// # Example
     ///
     /// ```rust
-    /// use proq::prelude::*;
+    /// use tokio_proq::prelude::*;
     ///# use chrono::Utc;
     ///# use std::time::Duration;
     ///
@@ -167,7 +183,7 @@ impl ProqClient {
     ///#         Some(Duration::from_secs(5)),
     ///#     ).unwrap();
     ///#
-    ///#     futures::executor::block_on(async {
+    ///#     tokio::runtime::Runtime::new().unwrap().block_on(async {
     /// let instantq = client.instant_query("up", None).await;
     ///#     });
     ///# }
@@ -198,7 +214,7 @@ impl ProqClient {
     /// # Example
     ///
     /// ```rust
-    /// use proq::prelude::*;
+    /// use tokio_proq::prelude::*;
     ///# use chrono::Utc;
     ///# use std::time::Duration;
     ///
@@ -209,7 +225,7 @@ impl ProqClient {
     ///#         Some(Duration::from_secs(5)),
     ///#     ).unwrap();
     ///#
-    ///#     futures::executor::block_on(async {
+    ///#     tokio::runtime::Runtime::new().unwrap().block_on(async {
     /// let end = Utc::now();
     /// let start = Some(end - chrono::Duration::minutes(1));
     /// let step = Some(Duration::from_secs_f64(1.5));
@@ -247,7 +263,7 @@ impl ProqClient {
     /// # Example
     ///
     /// ```rust
-    /// use proq::prelude::*;
+    /// use tokio_proq::prelude::*;
     ///# use chrono::Utc;
     ///# use std::time::Duration;
     ///
@@ -258,7 +274,7 @@ impl ProqClient {
     ///#         Some(Duration::from_secs(5)),
     ///#     ).unwrap();
     ///#
-    ///#     futures::executor::block_on(async {
+    ///#     tokio::runtime::Runtime::new().unwrap().block_on(async {
     /// let end = Utc::now();
     /// let start = Some(end - chrono::Duration::hours(1));
     ///
@@ -302,7 +318,7 @@ impl ProqClient {
     /// # Example
     ///
     /// ```rust
-    /// use proq::prelude::*;
+    /// use tokio_proq::prelude::*;
     ///# use std::time::Duration;
     ///
     ///# fn main() {
@@ -312,7 +328,7 @@ impl ProqClient {
     ///#         Some(Duration::from_secs(5)),
     ///#     ).unwrap();
     ///#
-    ///#     futures::executor::block_on(async {
+    ///#     tokio::runtime::Runtime::new().unwrap().block_on(async {
     /// let label_names = client.label_names().await;
     ///#     });
     ///# }
@@ -332,7 +348,7 @@ impl ProqClient {
     /// # Example
     ///
     /// ```rust
-    /// use proq::prelude::*;
+    /// use tokio_proq::prelude::*;
     ///# use std::time::Duration;
     ///
     ///# fn main() {
@@ -342,7 +358,7 @@ impl ProqClient {
     ///#         Some(Duration::from_secs(5)),
     ///#     ).unwrap();
     ///#
-    ///#     futures::executor::block_on(async {
+    ///#     tokio::runtime::Runtime::new().unwrap().block_on(async {
     /// let label_name = "version";
     /// let label_values = client.label_values(label_name).await;
     ///#     });
@@ -360,7 +376,7 @@ impl ProqClient {
     /// # Example
     ///
     /// ```rust
-    /// use proq::prelude::*;
+    /// use tokio_proq::prelude::*;
     ///# use std::time::Duration;
     ///
     ///# fn main() {
@@ -370,7 +386,7 @@ impl ProqClient {
     ///#         Some(Duration::from_secs(5)),
     ///#     ).unwrap();
     ///#
-    ///#     futures::executor::block_on(async {
+    ///#     tokio::runtime::Runtime::new().unwrap().block_on(async {
     /// let targets = client.targets().await;
     ///#     });
     ///# }
@@ -392,7 +408,7 @@ impl ProqClient {
     /// # Example
     ///
     /// ```rust
-    /// use proq::prelude::*;
+    /// use tokio_proq::prelude::*;
     ///# use std::time::Duration;
     ///
     ///# fn main() {
@@ -402,7 +418,7 @@ impl ProqClient {
     ///#         Some(Duration::from_secs(5)),
     ///#     ).unwrap();
     ///#
-    ///#     futures::executor::block_on(async {
+    ///#     tokio::runtime::Runtime::new().unwrap().block_on(async {
     /// let filtered_targets = client.targets_with_state(ProqTargetStates::DROPPED).await;
     ///#     });
     ///# }
@@ -418,7 +434,7 @@ impl ProqClient {
     /// # Example
     ///
     /// ```rust
-    /// use proq::prelude::*;
+    /// use tokio_proq::prelude::*;
     ///# use std::time::Duration;
     ///
     ///# fn main() {
@@ -428,7 +444,7 @@ impl ProqClient {
     ///#         Some(Duration::from_secs(5)),
     ///#     ).unwrap();
     ///#
-    ///#     futures::executor::block_on(async {
+    ///#     tokio::runtime::Runtime::new().unwrap().block_on(async {
     /// let rules = client.rules().await;
     ///#     });
     ///# }
@@ -450,7 +466,7 @@ impl ProqClient {
     /// # Example
     ///
     /// ```rust
-    /// use proq::prelude::*;
+    /// use tokio_proq::prelude::*;
     ///# use std::time::Duration;
     ///
     ///# fn main() {
@@ -460,7 +476,7 @@ impl ProqClient {
     ///#         Some(Duration::from_secs(5)),
     ///#     ).unwrap();
     ///#
-    ///#     futures::executor::block_on(async {
+    ///#     tokio::runtime::Runtime::new().unwrap().block_on(async {
     /// let filtered_rules = client.rules_with_type(ProqRulesType::ALERT).await;
     ///#     });
     ///# }
@@ -476,7 +492,7 @@ impl ProqClient {
     /// # Example
     ///
     /// ```rust
-    /// use proq::prelude::*;
+    /// use tokio_proq::prelude::*;
     ///# use std::time::Duration;
     ///
     ///# fn main() {
@@ -486,7 +502,7 @@ impl ProqClient {
     ///#         Some(Duration::from_secs(5)),
     ///#     ).unwrap();
     ///#
-    ///#     futures::executor::block_on(async {
+    ///#     tokio::runtime::Runtime::new().unwrap().block_on(async {
     /// let alerts = client.alerts().await;
     ///#     });
     ///# }
@@ -502,7 +518,7 @@ impl ProqClient {
     /// # Example
     ///
     /// ```rust
-    /// use proq::prelude::*;
+    /// use tokio_proq::prelude::*;
     ///# use std::time::Duration;
     ///
     ///# fn main() {
@@ -512,7 +528,7 @@ impl ProqClient {
     ///#         Some(Duration::from_secs(5)),
     ///#     ).unwrap();
     ///#
-    ///#     futures::executor::block_on(async {
+    ///#     tokio::runtime::Runtime::new().unwrap().block_on(async {
     /// let alert_managers = client.alert_managers().await;
     ///#     });
     ///# }
@@ -528,7 +544,7 @@ impl ProqClient {
     /// # Example
     ///
     /// ```rust
-    /// use proq::prelude::*;
+    /// use tokio_proq::prelude::*;
     ///# use std::time::Duration;
     ///
     ///# fn main() {
@@ -538,7 +554,7 @@ impl ProqClient {
     ///#         Some(Duration::from_secs(5)),
     ///#     ).unwrap();
     ///#
-    ///#     futures::executor::block_on(async {
+    ///#     tokio::runtime::Runtime::new().unwrap().block_on(async {
     /// let config = client.config().await;
     ///#     });
     ///# }
@@ -554,7 +570,7 @@ impl ProqClient {
     /// # Example
     ///
     /// ```rust
-    /// use proq::prelude::*;
+    /// use tokio_proq::prelude::*;
     ///# use std::time::Duration;
     ///
     ///# fn main() {
@@ -564,7 +580,7 @@ impl ProqClient {
     ///#         Some(Duration::from_secs(5)),
     ///#     ).unwrap();
     ///#
-    ///#     futures::executor::block_on(async {
+    ///#     tokio::runtime::Runtime::new().unwrap().block_on(async {
     /// let flags = client.flags().await;
     ///#     });
     ///# }

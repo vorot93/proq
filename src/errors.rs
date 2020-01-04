@@ -24,7 +24,7 @@ pub enum ProqError {
     UrlBuildError(http::Error),
     /// HTTP Client error raised from underlying HTTP client.
     #[fail(display = "Http client Error: {}", _0)]
-    HTTPClientError(surf::Exception),
+    HTTPClientError(reqwest::Error),
 }
 
 impl From<ParseError> for ProqError {

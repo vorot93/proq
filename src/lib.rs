@@ -7,7 +7,7 @@
 //!
 //! # Basic Usage
 //! ```rust
-//! use proq::prelude::*;
+//! use tokio_proq::prelude::*;
 //!# use chrono::Utc;
 //!# use std::time::Duration;
 //!
@@ -17,7 +17,7 @@
 //!        Some(Duration::from_secs(5)),
 //!    ).unwrap();
 //!
-//!    futures::executor::block_on(async {
+//!    tokio::runtime::Runtime::new().unwrap().block_on(async {
 //!        let end = Utc::now();
 //!        let start = Some(end - chrono::Duration::minutes(1));
 //!        let step = Some(Duration::from_secs_f64(1.5));
@@ -31,7 +31,7 @@
 //! the [api::ProqClient] documentation.**
 //!
 
-#![doc(html_logo_url = "https://github.com/vertexclique/proq/raw/master/img/proq.png")]
+#![doc(html_logo_url = "https://github.com/vorot93/tokio-proq/raw/master/img/proq.png")]
 // Force missing implementations
 //#![warn(missing_docs)]
 //#![warn(missing_debug_implementations)]
